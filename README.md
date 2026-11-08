@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="128" height="128" alt="AirFocus app icon"></p>
+
 # AirFocus
 
 AirFocus switches windows on your Mac based on where your head points. It reads head orientation from your AirPods, works out which window you're facing and gives that window keyboard focus. Turn toward another terminal, hold for about half a second, and you're typing in it. Your hands stay on the keyboard.
