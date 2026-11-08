@@ -1,0 +1,11 @@
+.DS_Store
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+.swiftpm/
+.build/
+.claude/
+signing-identity.local
+*.aftrace
+*.aftrace.gz

@@ -1,0 +1,68 @@
+name: Release
+
+# Push a tag like v1.2.0 to build AirFocus and publish it as a GitHub Release.
+# Run it by hand (Actions › Release › Run workflow) to test a build without publishing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Work out the version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev" >> "$GITHUB_ENV"
+          fi
+
+      - name: Test
+        run: swift test
+
+      # Signed ad hoc: no Apple Developer account needed.
+      - name: Build
+        run: SIGN_IDENTITY=- BUILD_NUMBER="$GITHUB_RUN_NUMBER" ./scripts/build-app.sh
+
+      - name: Package
+        run: |
+          APP=build/AirFocus.app
+          codesign --verify --strict "$APP"
+          lipo -archs "$APP/Contents/MacOS/AirFocus"
+          ditto -c -k --keepParent "$APP" AirFocus.zip
+          shasum -a 256 AirFocus.zip | tee AirFocus.zip.sha256
+
+      - name: Keep the build (manual runs)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AirFocus
+          path: |
+            AirFocus.zip
+            AirFocus.zip.sha256
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          if [[ -f "$notes" ]]; then
+            gh release create "$GITHUB_REF_NAME" AirFocus.zip AirFocus.zip.sha256 \
+              --title "AirFocus $VERSION" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" AirFocus.zip AirFocus.zip.sha256 \
+              --title "AirFocus $VERSION" --generate-notes
+          fi
